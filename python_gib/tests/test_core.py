@@ -1,5 +1,5 @@
 import unittest
-from python_gib.src.core import foo
+from ..src.core import foo
 
 class TestCore(unittest.TestCase):
     def test_foo(self):

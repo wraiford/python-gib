@@ -25,7 +25,7 @@ README.md            # This file
 
 ## Running Tests
 
-To run the unit tests, navigate to the root directory of the project (the directory containing `setup.py`) and execute the following command in your terminal:
+To run the unit tests, navigate to the root directory of the project (the directory containing `setup.py`) and execute the following command in your terminal. This command uses the `unittest` test runner to discover and run all tests within the `python_gib/tests` directory.
 
 ```bash
 python -m unittest discover -s python_gib/tests

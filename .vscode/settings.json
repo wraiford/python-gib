@@ -1,0 +1,108 @@
+{
+    "IDX.aI.enableInlineCompletion": true,
+    "IDX.aI.enableCodebaseIndexing": true,
+    "search.exclude": {
+        "**/*.BAK": true,
+        "**/*.bak": true,
+        "**/dist": true
+    },
+    "files.watcherExclude": {
+        "**/*.BAK": true,
+        "**/*.bak": true
+    },
+    "vim.useCtrlKeys": false,
+    "editor.formatOnSave": true,
+    "editor.lineNumbers": "relative",
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
+    "editor.trimAutoWhitespace": true,
+    "editor.tokenColorCustomizations": {
+        "comments": "#6d6a20da",
+        // "comments": "#C0C0C0",
+        "numbers": "#FF4500",
+        "functions": "#B22222",
+        "keywords": "#800080",
+        "strings": "#008080",
+        "variables": "#556B2F",
+        "types": "#FF4500",
+        "textMateRules": [
+            {
+                "settings": {
+                    "foreground": "#FF1493",
+                }
+            },
+            {
+                "scope": "constant.language.json.comments",
+                "settings": {
+                    "foreground": "#FFFF00",
+                }
+            },
+            {
+                "scope": "constant.language.json.comments",
+                "settings": {
+
+                    "foreground": "#ADFF2F",
+                }
+            },
+            {
+                "name": "variable",
+                "scope": "variable.other.readwrite",
+                "settings": {
+                    "foreground": "#FF69B4",
+                }
+            },
+        ]
+    },
+    "workbench.colorCustomizations": {
+        "editor.background": "#d5fca1",
+        "editor.lineHighlightBackground": "#7bff007e",
+        "editor.foldBackground": "#86c18361",
+        "editorGutter.foldingControlForeground": "#79098a",
+        "editorLineNumber.foreground": "#9c84a689",
+        "editorLineNumber.activeForeground": "#66068c",
+        // sidebar is the explorer files/folders section
+        "sideBarTitle.background": "#c5e679",
+        "sideBar.background": "#87d2dc",
+        "sideBar.foreground": "#203d1e",
+        "errorForeground": "#ff0066",
+        "list.errorForeground": "#d43636",
+        "sideBarSectionHeader.foreground": "#4f684c",
+        "sideBarSectionHeader.background": "#d4d277",
+        // activityBar is far left with hamburger, explorer, search, git,
+        // extensions,
+        "activityBar.activeBackground": "#c9c614",
+        "activityBar.activeBorder": "#a1118e",
+        "activityBar.background": "#535720",
+        "activityBar.foreground": "#aef0a7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#4b134c",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "commandCenter.border": "#e7e7e799",
+        "sash.hoverBorder": "#79098a5b",
+        "statusBar.background": "#205720",
+        "statusBar.foreground": "#e7e7e7",
+        "statusBarItem.hoverBackground": "#79098a5b",
+        "statusBarItem.remoteBackground": "#082f08",
+        "statusBarItem.remoteForeground": "#e7e7e7",
+        "titleBar.activeBackground": "#a52a2a",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveBackground": "#a52a2a99",
+        "titleBar.inactiveForeground": "#e7e7e799",
+        "tab.activeForeground": "#d2d05a",
+        "tab.activeBackground": "#ebcf32ac",
+        "tab.inactiveBackground": "#e2dccf",
+        "tab.hoverBackground": "#098a845b",
+        "terminal.background": "#c6c921",
+        "terminal.tab.activeBorder": "#40d479",
+        "outputView.background": "#b7b947",
+        "problems.background": "#499949",
+        "panelSectionHeader.background": "#ff0000",
+        "panel.background": "#9bae56",
+        "panelTitle.activeForeground": "#aef0a7",
+        "panelTitle.inactiveForeground": "#3c5639",
+        "list.activeSelectionBackground": "#d5fca1",
+        "list.inactiveSelectionBackground": "#429c9854",
+    },
+    "insertGuid.pasteAutomatically": "{n}",
+}
