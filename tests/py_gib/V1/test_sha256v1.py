@@ -8,7 +8,7 @@ import os
 # This allows 'from python_ibgib.ibgib_helper import ...' to work
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from python_ibgib.ibgib_helper import sha256v1, to_normalized_for_hashing
+from src.py_gib.V1.sha256v1 import sha256v1, to_normalized_for_hashing
 
 # Helper function for tests (Python equivalent of hashToHexCopy)
 def hash_to_hex_copy(message: str | bytes) -> str:
@@ -18,12 +18,12 @@ def hash_to_hex_copy(message: str | bytes) -> str:
         message_bytes = message.encode('utf-8')
     else:
         message_bytes = message
-    
+
     # Ensure message_bytes is not empty after potential encoding of an empty string
     # (though initial `if not message:` should catch empty strings)
     if not message_bytes: # Handles cases like empty string that becomes empty bytes
         return ""
-        
+
     h = hashlib.sha256()
     h.update(message_bytes)
     return h.hexdigest().upper()
@@ -87,7 +87,7 @@ class TestSha256V1(unittest.TestCase):
         # manualAllHash = await hashToHex(ibHash); // Since data/rel8ns are empty/falsy
         # manualAllHash = E975776B1A3E4468086E1D8C409116F6E098D13BEEDFE17AF668071B5D11CD55
         expected_hash = "E975776B1A3E4468086E1D8C409116F6E098D13BEEDFE17AF668071B5D11CD55"
-        
+
         equivalents = [
             {"ib": ib, "rel8ns": self.EMPTY_REL8NS},
             {"ib": ib, "rel8ns": self.EMPTY_REL8NS, "data": self.EMPTY_DATA},
