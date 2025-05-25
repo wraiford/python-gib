@@ -17,12 +17,12 @@ const maam = `[${import.meta.url}]`, sir = maam;
 
 import { IbGib_V1, IbGibRel8ns_V1 } from './types.mjs';
 import { sha256v1, hashToHexCopy } from './sha256v1.mjs';
-import { IbGibWithDataAndRel8ns, IbGibRel8ns } from '../types.mjs';
-import { getGib, getGibInfo } from './transforms/transform-helper.mjs';
+import { IbGibWithDataAndRel8ns, IbGibRel8ns } from '../types.mjs'; // IbGibRel8ns may be unused
+import { getGib, getGibInfo } from './transforms/transform-helper.mjs'; // getGib, getGibInfo seem unused in new tests
 
 
-import { Factory_V1 as factory } from './factory.mjs';
-import { toNormalizedForHashing } from '../helper.mjs';
+import { Factory_V1 as factory } from './factory.mjs'; // factory seems unused in new tests
+import { toNormalizedForHashing, getJsonReplacer_SortKeys } from '../helper.mjs';
 
 // #region Test Data
 
@@ -247,5 +247,982 @@ await respecfully(sir, `when hashing sha256v1`, async () => {
         });
 
     }
+
+});
+
+
+await respecfully(sir, `Python Edge Case Tests for sha256v1`, async () => {
+
+    const EMPTY_HASH_FOR_ABSENT_FIELD = "";
+
+    await ifWe(sir, `Edge Case 1: data with mixed undefined and empty string values`, async () => {
+        const ibGib_s1: IbGib_V1 = {
+            ib: 's1',
+            data: { a: undefined, b: '', c: 'val', d: { d1: undefined, d2: 'd2val' } }
+        };
+
+        const expected_ib_hash_s1 = "E8BC163C82EEE18733288C7D4AC636DB3A6DEB013EF2D37B68322BE20EDC45CC";
+        const expected_data_hash_s1 = "3310C5015C3426C4EC62CF5F5F3EC5D83F86C26E54C5AC3BD05C1B574B46ADE2";
+        const expected_gib_s1 = "9B9D08F270C5249FD1DC2E0453010EBD544C7781FF5CDAFADD7679C2C7DA7247";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s1.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s1`).isGonnaBe(expected_ib_hash_s1);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s1.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s1`).isGonnaBe(expected_data_hash_s1);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + "" + data_hash)
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s1 (from py test logic)`).isGonnaBe(expected_gib_s1);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s1, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s1 (from sha256v1 call)`).isGonnaBe(expected_gib_s1);
+    });
+
+    await ifWe(sir, `Edge Case 2: rel8ns with a relation mapping to a list containing null`, async () => {
+        const ibGib_s2: IbGib_V1 = {
+            ib: 's2',
+            rel8ns: { next: ['addr1', null, 'addr2'], prev: undefined }
+        };
+
+        const expected_ib_hash_s2 = "AD328846AA18B32A335816374511CAC1063C704B8C57999E51DA9F908290A7A4";
+        const expected_rel8ns_hash_s2 = "32945B4CE582D29827CA925DCA3155CA397C132F0DB1DB5DFF9AD46A8EFD98FE";
+        const expected_gib_s2 = "8DD27B4AFBE3AD7D59768CB4D1A574DC2FEA19546E922101FED6F6ECA9B97C61";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s2.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s2`).isGonnaBe(expected_ib_hash_s2);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s2.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s2`).isGonnaBe(expected_rel8ns_hash_s2);
+
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + rel8ns_hash + "")
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s2 (from py test logic)`).isGonnaBe(expected_gib_s2);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s2, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s2 (from sha256v1 call)`).isGonnaBe(expected_gib_s2);
+    });
+
+    await ifWe(sir, `Edge Case 3: data is an empty list []`, async () => {
+        const ibGib_s3: IbGib_V1 = { ib: 's3', data: [] };
+
+        const expected_ib_hash_s3 = "41242B9FAE56FAD4E6E77DFE33CB18D1C3FC583F988CF25EF9F2D9BE0D440BBB";
+        const expected_data_hash_s3 = "4F53CDA18C2BAA0C0354BB5F9A3ECBE5ED12AB4D8E11BA873C2F11161202B945";
+        const expected_gib_s3 = "BA109F5B0C09CF0A27EF976F876EE8F336DC954EF6443F324F19D78020E3E59A";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s3.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s3`).isGonnaBe(expected_ib_hash_s3);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s3.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s3`).isGonnaBe(expected_data_hash_s3);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s3 (from py test logic)`).isGonnaBe(expected_gib_s3);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s3, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s3 (from sha256v1 call)`).isGonnaBe(expected_gib_s3);
+    });
+
+    await ifWe(sir, `Edge Case 4: data contains a list with dictionaries, where inner dicts have null values`, async () => {
+        const ibGib_s4: IbGib_V1 = {
+            ib: 's4',
+            data: { items: [{ id: 1, val: null, name: 'item1' }, { id: 2, val: 'present' }] }
+        };
+
+        const expected_ib_hash_s4 = "5B840157E7E86AEF3B3FD0FC24F3ADD34D3E7F210370D429475ED1BCD3E7FCA2";
+        const expected_data_hash_s4 = "2682A15F60291F933B57EE14F0A3D5FD233FC90B3FF1ADD5FD473F859FA6B287";
+        const expected_gib_s4 = "2AE26C6F9A4D53CE32A0A1792E59F34126A25503CE33728EA7CB8A38E29DD0BF";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s4.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s4`).isGonnaBe(expected_ib_hash_s4);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s4.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s4`).isGonnaBe(expected_data_hash_s4);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s4 (from py test logic)`).isGonnaBe(expected_gib_s4);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s4, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s4 (from sha256v1 call)`).isGonnaBe(expected_gib_s4);
+    });
+
+    await ifWe(sir, `Edge Case 5: data key order vs. rel8ns key order`, async () => {
+        const ibGib_s5: IbGib_V1 = {
+            ib: 's5',
+            data: { z: 1, a: 2 },
+            rel8ns: { z_rel: ['z1'], a_rel: ['a1'] }
+        };
+
+        const expected_ib_hash_s5 = "3B96FC064FA874A80A132BDA60BEBF54EFBC780A358FDCAE4FBBD7E12B66B630";
+        const expected_data_hash_s5 = "C2985C5BA6F7D2A55E768F92490CA09388E95BC4CCCB9FDF11B15F4D42F93E73";
+        const expected_rel8ns_hash_s5 = "3C0705B51593C740738A0BFB4D9030C8A8093D8A6049346E823CD033BAAA09E5";
+        const expected_gib_s5 = "7AC6FB16BC853C6AE7D375ECEEA810ABB6F60241A1679ADEE4DC6ED4E29BE74A";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s5.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s5`).isGonnaBe(expected_ib_hash_s5);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s5.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s5`).isGonnaBe(expected_data_hash_s5);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s5.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s5`).isGonnaBe(expected_rel8ns_hash_s5);
+        
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s5 (from py test logic)`).isGonnaBe(expected_gib_s5);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s5, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s5 (from sha256v1 call)`).isGonnaBe(expected_gib_s5);
+    });
+
+    await ifWe(sir, `Edge Case 6: data with special characters in string values and keys`, async () => {
+        const ibGib_s6: IbGib_V1 = {
+            ib: 's6',
+            data: { 'key "1"': 'value with "quotes" and \n newline', 'key_ñ': 'val_ü' }
+        };
+
+        const expected_ib_hash_s6 = "71E7690959239CA065841EBA3EBB281072BAA78BA0BB31079B9ACB4A009A9FE3";
+        const expected_data_hash_s6 = "441200D475E6171CD94518A7AD358C29281DBD962163EE7F1B309058098CECE7";
+        const expected_gib_s6 = "9AF9BE9284CFCE565CBFD482EA0797E0D67CCD0AEDF6509BCEA3B9D4D00931BF";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s6.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s6`).isGonnaBe(expected_ib_hash_s6);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s6.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s6`).isGonnaBe(expected_data_hash_s6);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s6 (from py test logic)`).isGonnaBe(expected_gib_s6);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s6, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s6 (from sha256v1 call)`).isGonnaBe(expected_gib_s6);
+    });
+
+    await ifWe(sir, `Edge Case 7a: data is a primitive type (boolean True)`, async () => {
+        const ibGib_s7a: IbGib_V1 = { ib: 's7a', data: true };
+
+        const expected_ib_hash_s7a = "612A9EB864ED62C258BDCB155F13F590879BA34AD30DDE91CB9BE38139439E9F";
+        const expected_data_hash_s7a = "B5BEA41B6C623F7C09F1BF24DCAE58EBAB3C0CDD90AD966BC43A45B44867E12B";
+        const expected_gib_s7a = "53BBABB9F24C75E3C6037D744C241AF710B6E886C22398537AA9332D5626D022";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s7a.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s7a`).isGonnaBe(expected_ib_hash_s7a);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s7a.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s7a`).isGonnaBe(expected_data_hash_s7a);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s7a (from py test logic)`).isGonnaBe(expected_gib_s7a);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s7a, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s7a (from sha256v1 call)`).isGonnaBe(expected_gib_s7a);
+    });
+
+    await ifWe(sir, `Edge Case 7b: data is a primitive type (number)`, async () => {
+        const ibGib_s7b: IbGib_V1 = { ib: 's7b', data: 123.45 };
+
+        const expected_ib_hash_s7b = "70348C184BB7E09344EEEE0BA0A766D1DB6C1B1E02520A6534C94F78591EBA46";
+        const expected_data_hash_s7b = "4EBC4A141B378980461430980948A55988FBF56F85D084AC33D8A8F61B9FAB88";
+        const expected_gib_s7b = "F81D2861750A638FBE6F792D66A8EE2408C5F5CB965755166957C46B1B242F41";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s7b.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s7b`).isGonnaBe(expected_ib_hash_s7b);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s7b.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s7b`).isGonnaBe(expected_data_hash_s7b);
+
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s7b (from py test logic)`).isGonnaBe(expected_gib_s7b);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s7b, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s7b (from sha256v1 call)`).isGonnaBe(expected_gib_s7b);
+    });
+
+    await ifWe(sir, `Edge Case 8: rel8ns with some relations being empty lists, others non-empty`, async () => {
+        const ibGib_s8: IbGib_V1 = {
+            ib: 's8',
+            rel8ns: { past: [], future: ['addr1'], empty_too: [] }
+        };
+
+        const expected_ib_hash_s8 = "1CB7637B6957AC5D6F6CDEC745554AFD3CD1537BB6E7A8E74D41C2EA58B89E97";
+        const expected_rel8ns_hash_s8 = "A98E517BB1289561B164706289F2CCE1423EA9ABCA11FC35BFFD4E0817224760";
+        const expected_gib_s8 = "EE653CEE56759A6C868A485582E4E66C8B57DFBE1C55CF36BDBF237BF5C09CF8";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s8.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s8`).isGonnaBe(expected_ib_hash_s8);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s8.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s8`).isGonnaBe(expected_rel8ns_hash_s8);
+        
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s8 (from py test logic)`).isGonnaBe(expected_gib_s8);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s8, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s8 (from sha256v1 call)`).isGonnaBe(expected_gib_s8);
+    });
+
+    await ifWe(sir, `Edge Case 9: Deeply nested data with mixed undefined/null, lists, and dicts`, async () => {
+        const ibGib_s9: IbGib_V1 = {
+            ib: 's9',
+            data: { level1: { l2_val: 'v2', l2_none: undefined, l2_list: [1, { l3_none: null, l3_val: 'v3' }, 3] } }
+        };
+
+        const expected_ib_hash_s9 = "E72D310DBB213F4C2E34DA28935B38905332EE3628A04DF2DD13859FD769C6C5";
+        const expected_data_hash_s9 = "F8C3EF9BFBB9D927B55B3BA1FAAECAD1B35FA9B912AEAF9B75A807DA814CB975";
+        const expected_gib_s9 = "DB2F3306E2E91F22B0C7B10787760D0FE25BA79B7E3DFFE38164381EA06BE6A6";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s9.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s9`).isGonnaBe(expected_ib_hash_s9);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s9.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s9`).isGonnaBe(expected_data_hash_s9);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s9 (from py test logic)`).isGonnaBe(expected_gib_s9);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s9, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s9 (from sha256v1 call)`).isGonnaBe(expected_gib_s9);
+    });
+
+    await ifWe(sir, `Edge Case 10a: ibgib with data but no rel8ns key`, async () => {
+        const ibGib_s10a: IbGib_V1 = { ib: 's10a', data: { k: 'v' } };
+
+        const expected_ib_hash_s10a = "7674836E2F8926A8F0BE7998ABB44BACBC041BC51AF761F85E09A1349C60046C";
+        const expected_data_hash_s10a = "666C1AA02E8068C6D5CC1D3295009432C16790BEC28EC8CE119D0D1A18D61319";
+        const expected_gib_s10a = "81C655EDEC7294CC0900430ED8EE0125EFF15C2F86EAF047C0E8FEFE0D4569E8";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s10a.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s10a`).isGonnaBe(expected_ib_hash_s10a);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s10a.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s10a`).isGonnaBe(expected_data_hash_s10a);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + "" + data_hash)
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s10a (from py test logic)`).isGonnaBe(expected_gib_s10a);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s10a, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s10a (from sha256v1 call)`).isGonnaBe(expected_gib_s10a);
+    });
+
+    await ifWe(sir, `Edge Case 10b: ibgib with rel8ns but no data key`, async () => {
+        const ibGib_s10b: IbGib_V1 = { ib: 's10b', rel8ns: { r: ['a'] } };
+
+        const expected_ib_hash_s10b = "BF2FDA41B9B401E5F86577387D6C97FCA6AB3F7A4222735C42390B587AC8517D";
+        const expected_rel8ns_hash_s10b = "8A47C0659C530ACE4A79B55DE042782ABDFCC89848CDDB71260132B1FFE554AF";
+        const expected_gib_s10b = "F35416C53D3683B60C2EE46DD1542A2A1D957F70D991D8DDEDC8C03715ED0DEA";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s10b.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s10b`).isGonnaBe(expected_ib_hash_s10b);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s10b.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s10b`).isGonnaBe(expected_rel8ns_hash_s10b);
+
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + rel8ns_hash + "")
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s10b (from py test logic)`).isGonnaBe(expected_gib_s10b);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s10b, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s10b (from sha256v1 call)`).isGonnaBe(expected_gib_s10b);
+    });
+
+});
+
+await respecfully(sir, `Python Edge Case Tests for sha256v1`, async () => {
+
+    const EMPTY_HASH_FOR_ABSENT_FIELD = "";
+
+    await ifWe(sir, `Edge Case 1: data with mixed undefined and empty string values`, async () => {
+        const ibGib_s1: IbGib_V1 = {
+            ib: 's1',
+            data: { a: undefined, b: '', c: 'val', d: { d1: undefined, d2: 'd2val' } }
+        };
+
+        const expected_ib_hash_s1 = "E8BC163C82EEE18733288C7D4AC636DB3A6DEB013EF2D37B68322BE20EDC45CC";
+        const expected_data_hash_s1 = "3310C5015C3426C4EC62CF5F5F3EC5D83F86C26E54C5AC3BD05C1B574B46ADE2";
+        const expected_gib_s1 = "9B9D08F270C5249FD1DC2E0453010EBD544C7781FF5CDAFADD7679C2C7DA7247";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s1.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s1`).isGonnaBe(expected_ib_hash_s1);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s1.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s1`).isGonnaBe(expected_data_hash_s1);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + "" + data_hash)
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s1 (from py test logic)`).isGonnaBe(expected_gib_s1);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s1, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s1 (from sha256v1 call)`).isGonnaBe(expected_gib_s1);
+    });
+
+    await ifWe(sir, `Edge Case 2: rel8ns with a relation mapping to a list containing null`, async () => {
+        const ibGib_s2: IbGib_V1 = {
+            ib: 's2',
+            rel8ns: { next: ['addr1', null, 'addr2'], prev: undefined }
+        };
+
+        const expected_ib_hash_s2 = "AD328846AA18B32A335816374511CAC1063C704B8C57999E51DA9F908290A7A4";
+        const expected_rel8ns_hash_s2 = "32945B4CE582D29827CA925DCA3155CA397C132F0DB1DB5DFF9AD46A8EFD98FE";
+        const expected_gib_s2 = "8DD27B4AFBE3AD7D59768CB4D1A574DC2FEA19546E922101FED6F6ECA9B97C61";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s2.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s2`).isGonnaBe(expected_ib_hash_s2);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s2.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s2`).isGonnaBe(expected_rel8ns_hash_s2);
+
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + rel8ns_hash + "")
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s2 (from py test logic)`).isGonnaBe(expected_gib_s2);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s2, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s2 (from sha256v1 call)`).isGonnaBe(expected_gib_s2);
+    });
+
+    await ifWe(sir, `Edge Case 3: data is an empty list []`, async () => {
+        const ibGib_s3: IbGib_V1 = { ib: 's3', data: [] };
+
+        const expected_ib_hash_s3 = "41242B9FAE56FAD4E6E77DFE33CB18D1C3FC583F988CF25EF9F2D9BE0D440BBB";
+        const expected_data_hash_s3 = "4F53CDA18C2BAA0C0354BB5F9A3ECBE5ED12AB4D8E11BA873C2F11161202B945";
+        const expected_gib_s3 = "BA109F5B0C09CF0A27EF976F876EE8F336DC954EF6443F324F19D78020E3E59A";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s3.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s3`).isGonnaBe(expected_ib_hash_s3);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s3.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s3`).isGonnaBe(expected_data_hash_s3);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s3 (from py test logic)`).isGonnaBe(expected_gib_s3);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s3, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s3 (from sha256v1 call)`).isGonnaBe(expected_gib_s3);
+    });
+
+    await ifWe(sir, `Edge Case 4: data contains a list with dictionaries, where inner dicts have null values`, async () => {
+        const ibGib_s4: IbGib_V1 = {
+            ib: 's4',
+            data: { items: [{ id: 1, val: null, name: 'item1' }, { id: 2, val: 'present' }] }
+        };
+
+        const expected_ib_hash_s4 = "5B840157E7E86AEF3B3FD0FC24F3ADD34D3E7F210370D429475ED1BCD3E7FCA2";
+        const expected_data_hash_s4 = "2682A15F60291F933B57EE14F0A3D5FD233FC90B3FF1ADD5FD473F859FA6B287";
+        const expected_gib_s4 = "2AE26C6F9A4D53CE32A0A1792E59F34126A25503CE33728EA7CB8A38E29DD0BF";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s4.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s4`).isGonnaBe(expected_ib_hash_s4);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s4.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s4`).isGonnaBe(expected_data_hash_s4);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s4 (from py test logic)`).isGonnaBe(expected_gib_s4);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s4, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s4 (from sha256v1 call)`).isGonnaBe(expected_gib_s4);
+    });
+
+    await ifWe(sir, `Edge Case 5: data key order vs. rel8ns key order`, async () => {
+        const ibGib_s5: IbGib_V1 = {
+            ib: 's5',
+            data: { z: 1, a: 2 },
+            rel8ns: { z_rel: ['z1'], a_rel: ['a1'] }
+        };
+
+        const expected_ib_hash_s5 = "3B96FC064FA874A80A132BDA60BEBF54EFBC780A358FDCAE4FBBD7E12B66B630";
+        const expected_data_hash_s5 = "C2985C5BA6F7D2A55E768F92490CA09388E95BC4CCCB9FDF11B15F4D42F93E73";
+        const expected_rel8ns_hash_s5 = "3C0705B51593C740738A0BFB4D9030C8A8093D8A6049346E823CD033BAAA09E5";
+        const expected_gib_s5 = "7AC6FB16BC853C6AE7D375ECEEA810ABB6F60241A1679ADEE4DC6ED4E29BE74A";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s5.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s5`).isGonnaBe(expected_ib_hash_s5);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s5.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s5`).isGonnaBe(expected_data_hash_s5);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s5.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s5`).isGonnaBe(expected_rel8ns_hash_s5);
+        
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s5 (from py test logic)`).isGonnaBe(expected_gib_s5);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s5, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s5 (from sha256v1 call)`).isGonnaBe(expected_gib_s5);
+    });
+
+    await ifWe(sir, `Edge Case 6: data with special characters in string values and keys`, async () => {
+        const ibGib_s6: IbGib_V1 = {
+            ib: 's6',
+            data: { 'key "1"': 'value with "quotes" and \n newline', 'key_ñ': 'val_ü' }
+        };
+
+        const expected_ib_hash_s6 = "71E7690959239CA065841EBA3EBB281072BAA78BA0BB31079B9ACB4A009A9FE3";
+        const expected_data_hash_s6 = "441200D475E6171CD94518A7AD358C29281DBD962163EE7F1B309058098CECE7";
+        const expected_gib_s6 = "9AF9BE9284CFCE565CBFD482EA0797E0D67CCD0AEDF6509BCEA3B9D4D00931BF";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s6.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s6`).isGonnaBe(expected_ib_hash_s6);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s6.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s6`).isGonnaBe(expected_data_hash_s6);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s6 (from py test logic)`).isGonnaBe(expected_gib_s6);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s6, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s6 (from sha256v1 call)`).isGonnaBe(expected_gib_s6);
+    });
+
+    await ifWe(sir, `Edge Case 7a: data is a primitive type (boolean True)`, async () => {
+        const ibGib_s7a: IbGib_V1 = { ib: 's7a', data: true };
+
+        const expected_ib_hash_s7a = "612A9EB864ED62C258BDCB155F13F590879BA34AD30DDE91CB9BE38139439E9F";
+        const expected_data_hash_s7a = "B5BEA41B6C623F7C09F1BF24DCAE58EBAB3C0CDD90AD966BC43A45B44867E12B";
+        const expected_gib_s7a = "53BBABB9F24C75E3C6037D744C241AF710B6E886C22398537AA9332D5626D022";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s7a.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s7a`).isGonnaBe(expected_ib_hash_s7a);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s7a.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s7a`).isGonnaBe(expected_data_hash_s7a);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s7a (from py test logic)`).isGonnaBe(expected_gib_s7a);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s7a, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s7a (from sha256v1 call)`).isGonnaBe(expected_gib_s7a);
+    });
+
+    await ifWe(sir, `Edge Case 7b: data is a primitive type (number)`, async () => {
+        const ibGib_s7b: IbGib_V1 = { ib: 's7b', data: 123.45 };
+
+        const expected_ib_hash_s7b = "70348C184BB7E09344EEEE0BA0A766D1DB6C1B1E02520A6534C94F78591EBA46";
+        const expected_data_hash_s7b = "4EBC4A141B378980461430980948A55988FBF56F85D084AC33D8A8F61B9FAB88";
+        const expected_gib_s7b = "F81D2861750A638FBE6F792D66A8EE2408C5F5CB965755166957C46B1B242F41";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s7b.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s7b`).isGonnaBe(expected_ib_hash_s7b);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s7b.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s7b`).isGonnaBe(expected_data_hash_s7b);
+
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s7b (from py test logic)`).isGonnaBe(expected_gib_s7b);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s7b, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s7b (from sha256v1 call)`).isGonnaBe(expected_gib_s7b);
+    });
+
+    await ifWe(sir, `Edge Case 8: rel8ns with some relations being empty lists, others non-empty`, async () => {
+        const ibGib_s8: IbGib_V1 = {
+            ib: 's8',
+            rel8ns: { past: [], future: ['addr1'], empty_too: [] }
+        };
+
+        const expected_ib_hash_s8 = "1CB7637B6957AC5D6F6CDEC745554AFD3CD1537BB6E7A8E74D41C2EA58B89E97";
+        const expected_rel8ns_hash_s8 = "A98E517BB1289561B164706289F2CCE1423EA9ABCA11FC35BFFD4E0817224760";
+        const expected_gib_s8 = "EE653CEE56759A6C868A485582E4E66C8B57DFBE1C55CF36BDBF237BF5C09CF8";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s8.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s8`).isGonnaBe(expected_ib_hash_s8);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s8.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s8`).isGonnaBe(expected_rel8ns_hash_s8);
+        
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s8 (from py test logic)`).isGonnaBe(expected_gib_s8);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s8, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s8 (from sha256v1 call)`).isGonnaBe(expected_gib_s8);
+    });
+
+    await ifWe(sir, `Edge Case 9: Deeply nested data with mixed undefined/null, lists, and dicts`, async () => {
+        const ibGib_s9: IbGib_V1 = {
+            ib: 's9',
+            data: { level1: { l2_val: 'v2', l2_none: undefined, l2_list: [1, { l3_none: null, l3_val: 'v3' }, 3] } }
+        };
+
+        const expected_ib_hash_s9 = "E72D310DBB213F4C2E34DA28935B38905332EE3628A04DF2DD13859FD769C6C5";
+        const expected_data_hash_s9 = "F8C3EF9BFBB9D927B55B3BA1FAAECAD1B35FA9B912AEAF9B75A807DA814CB975";
+        const expected_gib_s9 = "DB2F3306E2E91F22B0C7B10787760D0FE25BA79B7E3DFFE38164381EA06BE6A6";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s9.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s9`).isGonnaBe(expected_ib_hash_s9);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s9.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s9`).isGonnaBe(expected_data_hash_s9);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s9 (from py test logic)`).isGonnaBe(expected_gib_s9);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s9, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s9 (from sha256v1 call)`).isGonnaBe(expected_gib_s9);
+    });
+
+    await ifWe(sir, `Edge Case 10a: ibgib with data but no rel8ns key`, async () => {
+        const ibGib_s10a: IbGib_V1 = { ib: 's10a', data: { k: 'v' } };
+
+        const expected_ib_hash_s10a = "7674836E2F8926A8F0BE7998ABB44BACBC041BC51AF761F85E09A1349C60046C";
+        const expected_data_hash_s10a = "666C1AA02E8068C6D5CC1D3295009432C16790BEC28EC8CE119D0D1A18D61319";
+        const expected_gib_s10a = "81C655EDEC7294CC0900430ED8EE0125EFF15C2F86EAF047C0E8FEFE0D4569E8";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s10a.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s10a`).isGonnaBe(expected_ib_hash_s10a);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s10a.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s10a`).isGonnaBe(expected_data_hash_s10a);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + "" + data_hash)
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s10a (from py test logic)`).isGonnaBe(expected_gib_s10a);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s10a, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s10a (from sha256v1 call)`).isGonnaBe(expected_gib_s10a);
+    });
+
+    await ifWe(sir, `Edge Case 10b: ibgib with rel8ns but no data key`, async () => {
+        const ibGib_s10b: IbGib_V1 = { ib: 's10b', rel8ns: { r: ['a'] } };
+
+        const expected_ib_hash_s10b = "BF2FDA41B9B401E5F86577387D6C97FCA6AB3F7A4222735C42390B587AC8517D";
+        const expected_rel8ns_hash_s10b = "8A47C0659C530ACE4A79B55DE042782ABDFCC89848CDDB71260132B1FFE554AF";
+        const expected_gib_s10b = "F35416C53D3683B60C2EE46DD1542A2A1D957F70D991D8DDEDC8C03715ED0DEA";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s10b.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s10b`).isGonnaBe(expected_ib_hash_s10b);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s10b.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s10b`).isGonnaBe(expected_rel8ns_hash_s10b);
+
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + rel8ns_hash + "")
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s10b (from py test logic)`).isGonnaBe(expected_gib_s10b);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s10b, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s10b (from sha256v1 call)`).isGonnaBe(expected_gib_s10b);
+    });
+
+});
+
+
+await respecfully(sir, `Python Edge Case Tests for sha256v1`, async () => {
+
+    const EMPTY_HASH_FOR_ABSENT_FIELD = ""; // Equivalent to Python's "" for non-existent data/rel8ns hashes
+
+    await ifWe(sir, `Edge Case 1: data with mixed undefined and empty string values`, async () => {
+        const ibGib_s1: IbGib_V1 = {
+            ib: 's1',
+            data: { a: undefined, b: '', c: 'val', d: { d1: undefined, d2: 'd2val' } }
+        };
+
+        const expected_ib_hash_s1 = "E8BC163C82EEE18733288C7D4AC636DB3A6DEB013EF2D37B68322BE20EDC45CC";
+        const expected_data_hash_s1 = "3310C5015C3426C4EC62CF5F5F3EC5D83F86C26E54C5AC3BD05C1B574B46ADE2";
+        const expected_gib_s1 = "9B9D08F270C5249FD1DC2E0453010EBD544C7781FF5CDAFADD7679C2C7DA7247";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s1.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s1`).isGonnaBe(expected_ib_hash_s1);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s1.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s1`).isGonnaBe(expected_data_hash_s1);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + "" + data_hash)
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s1 (from py test logic)`).isGonnaBe(expected_gib_s1);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s1, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s1 (from sha256v1 call)`).isGonnaBe(expected_gib_s1);
+    });
+
+    await ifWe(sir, `Edge Case 2: rel8ns with a relation mapping to a list containing null`, async () => {
+        const ibGib_s2: IbGib_V1 = {
+            ib: 's2',
+            rel8ns: { next: ['addr1', null, 'addr2'], prev: undefined }
+        };
+
+        const expected_ib_hash_s2 = "AD328846AA18B32A335816374511CAC1063C704B8C57999E51DA9F908290A7A4";
+        const expected_rel8ns_hash_s2 = "32945B4CE582D29827CA925DCA3155CA397C132F0DB1DB5DFF9AD46A8EFD98FE";
+        const expected_gib_s2 = "8DD27B4AFBE3AD7D59768CB4D1A574DC2FEA19546E922101FED6F6ECA9B97C61";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s2.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s2`).isGonnaBe(expected_ib_hash_s2);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s2.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s2`).isGonnaBe(expected_rel8ns_hash_s2);
+
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + rel8ns_hash + "")
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s2 (from py test logic)`).isGonnaBe(expected_gib_s2);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s2, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s2 (from sha256v1 call)`).isGonnaBe(expected_gib_s2);
+    });
+
+    await ifWe(sir, `Edge Case 3: data is an empty list []`, async () => {
+        const ibGib_s3: IbGib_V1 = { ib: 's3', data: [] };
+
+        const expected_ib_hash_s3 = "41242B9FAE56FAD4E6E77DFE33CB18D1C3FC583F988CF25EF9F2D9BE0D440BBB";
+        const expected_data_hash_s3 = "4F53CDA18C2BAA0C0354BB5F9A3ECBE5ED12AB4D8E11BA873C2F11161202B945";
+        const expected_gib_s3 = "BA109F5B0C09CF0A27EF976F876EE8F336DC954EF6443F324F19D78020E3E59A";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s3.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s3`).isGonnaBe(expected_ib_hash_s3);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s3.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s3`).isGonnaBe(expected_data_hash_s3);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s3 (from py test logic)`).isGonnaBe(expected_gib_s3);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s3, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s3 (from sha256v1 call)`).isGonnaBe(expected_gib_s3);
+    });
+
+    await ifWe(sir, `Edge Case 4: data contains a list with dictionaries, where inner dicts have null values`, async () => {
+        const ibGib_s4: IbGib_V1 = {
+            ib: 's4',
+            data: { items: [{ id: 1, val: null, name: 'item1' }, { id: 2, val: 'present' }] }
+        };
+
+        const expected_ib_hash_s4 = "5B840157E7E86AEF3B3FD0FC24F3ADD34D3E7F210370D429475ED1BCD3E7FCA2";
+        const expected_data_hash_s4 = "2682A15F60291F933B57EE14F0A3D5FD233FC90B3FF1ADD5FD473F859FA6B287";
+        const expected_gib_s4 = "2AE26C6F9A4D53CE32A0A1792E59F34126A25503CE33728EA7CB8A38E29DD0BF";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s4.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s4`).isGonnaBe(expected_ib_hash_s4);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s4.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s4`).isGonnaBe(expected_data_hash_s4);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s4 (from py test logic)`).isGonnaBe(expected_gib_s4);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s4, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s4 (from sha256v1 call)`).isGonnaBe(expected_gib_s4);
+    });
+
+    await ifWe(sir, `Edge Case 5: data key order vs. rel8ns key order`, async () => {
+        const ibGib_s5: IbGib_V1 = {
+            ib: 's5',
+            data: { z: 1, a: 2 },
+            rel8ns: { z_rel: ['z1'], a_rel: ['a1'] }
+        };
+
+        const expected_ib_hash_s5 = "3B96FC064FA874A80A132BDA60BEBF54EFBC780A358FDCAE4FBBD7E12B66B630";
+        const expected_data_hash_s5 = "C2985C5BA6F7D2A55E768F92490CA09388E95BC4CCCB9FDF11B15F4D42F93E73";
+        const expected_rel8ns_hash_s5 = "3C0705B51593C740738A0BFB4D9030C8A8093D8A6049346E823CD033BAAA09E5";
+        const expected_gib_s5 = "7AC6FB16BC853C6AE7D375ECEEA810ABB6F60241A1679ADEE4DC6ED4E29BE74A";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s5.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s5`).isGonnaBe(expected_ib_hash_s5);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s5.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s5`).isGonnaBe(expected_data_hash_s5);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s5.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s5`).isGonnaBe(expected_rel8ns_hash_s5);
+        
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s5 (from py test logic)`).isGonnaBe(expected_gib_s5);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s5, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s5 (from sha256v1 call)`).isGonnaBe(expected_gib_s5);
+    });
+
+    await ifWe(sir, `Edge Case 6: data with special characters in string values and keys`, async () => {
+        const ibGib_s6: IbGib_V1 = {
+            ib: 's6',
+            data: { 'key "1"': 'value with "quotes" and \n newline', 'key_ñ': 'val_ü' }
+        };
+
+        const expected_ib_hash_s6 = "71E7690959239CA065841EBA3EBB281072BAA78BA0BB31079B9ACB4A009A9FE3";
+        const expected_data_hash_s6 = "441200D475E6171CD94518A7AD358C29281DBD962163EE7F1B309058098CECE7";
+        const expected_gib_s6 = "9AF9BE9284CFCE565CBFD482EA0797E0D67CCD0AEDF6509BCEA3B9D4D00931BF";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s6.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s6`).isGonnaBe(expected_ib_hash_s6);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s6.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s6`).isGonnaBe(expected_data_hash_s6);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s6 (from py test logic)`).isGonnaBe(expected_gib_s6);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s6, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s6 (from sha256v1 call)`).isGonnaBe(expected_gib_s6);
+    });
+
+    await ifWe(sir, `Edge Case 7a: data is a primitive type (boolean True)`, async () => {
+        const ibGib_s7a: IbGib_V1 = { ib: 's7a', data: true };
+
+        const expected_ib_hash_s7a = "612A9EB864ED62C258BDCB155F13F590879BA34AD30DDE91CB9BE38139439E9F";
+        const expected_data_hash_s7a = "B5BEA41B6C623F7C09F1BF24DCAE58EBAB3C0CDD90AD966BC43A45B44867E12B";
+        const expected_gib_s7a = "53BBABB9F24C75E3C6037D744C241AF710B6E886C22398537AA9332D5626D022";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s7a.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s7a`).isGonnaBe(expected_ib_hash_s7a);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s7a.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s7a`).isGonnaBe(expected_data_hash_s7a);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s7a (from py test logic)`).isGonnaBe(expected_gib_s7a);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s7a, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s7a (from sha256v1 call)`).isGonnaBe(expected_gib_s7a);
+    });
+
+    await ifWe(sir, `Edge Case 7b: data is a primitive type (number)`, async () => {
+        const ibGib_s7b: IbGib_V1 = { ib: 's7b', data: 123.45 };
+
+        const expected_ib_hash_s7b = "70348C184BB7E09344EEEE0BA0A766D1DB6C1B1E02520A6534C94F78591EBA46";
+        const expected_data_hash_s7b = "4EBC4A141B378980461430980948A55988FBF56F85D084AC33D8A8F61B9FAB88";
+        const expected_gib_s7b = "F81D2861750A638FBE6F792D66A8EE2408C5F5CB965755166957C46B1B242F41";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s7b.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s7b`).isGonnaBe(expected_ib_hash_s7b);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s7b.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s7b`).isGonnaBe(expected_data_hash_s7b);
+
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s7b (from py test logic)`).isGonnaBe(expected_gib_s7b);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s7b, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s7b (from sha256v1 call)`).isGonnaBe(expected_gib_s7b);
+    });
+
+    await ifWe(sir, `Edge Case 8: rel8ns with some relations being empty lists, others non-empty`, async () => {
+        const ibGib_s8: IbGib_V1 = {
+            ib: 's8',
+            rel8ns: { past: [], future: ['addr1'], empty_too: [] }
+        };
+
+        const expected_ib_hash_s8 = "1CB7637B6957AC5D6F6CDEC745554AFD3CD1537BB6E7A8E74D41C2EA58B89E97";
+        const expected_rel8ns_hash_s8 = "A98E517BB1289561B164706289F2CCE1423EA9ABCA11FC35BFFD4E0817224760";
+        const expected_gib_s8 = "EE653CEE56759A6C868A485582E4E66C8B57DFBE1C55CF36BDBF237BF5C09CF8";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s8.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s8`).isGonnaBe(expected_ib_hash_s8);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s8.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s8`).isGonnaBe(expected_rel8ns_hash_s8);
+        
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s8 (from py test logic)`).isGonnaBe(expected_gib_s8);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s8, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s8 (from sha256v1 call)`).isGonnaBe(expected_gib_s8);
+    });
+
+    await ifWe(sir, `Edge Case 9: Deeply nested data with mixed undefined/null, lists, and dicts`, async () => {
+        const ibGib_s9: IbGib_V1 = {
+            ib: 's9',
+            data: { level1: { l2_val: 'v2', l2_none: undefined, l2_list: [1, { l3_none: null, l3_val: 'v3' }, 3] } }
+        };
+
+        const expected_ib_hash_s9 = "E72D310DBB213F4C2E34DA28935B38905332EE3628A04DF2DD13859FD769C6C5";
+        const expected_data_hash_s9 = "F8C3EF9BFBB9D927B55B3BA1FAAECAD1B35FA9B912AEAF9B75A807DA814CB975";
+        const expected_gib_s9 = "DB2F3306E2E91F22B0C7B10787760D0FE25BA79B7E3DFFE38164381EA06BE6A6";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s9.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s9`).isGonnaBe(expected_ib_hash_s9);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s9.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s9`).isGonnaBe(expected_data_hash_s9);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s9 (from py test logic)`).isGonnaBe(expected_gib_s9);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s9, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s9 (from sha256v1 call)`).isGonnaBe(expected_gib_s9);
+    });
+
+    await ifWe(sir, `Edge Case 10a: ibgib with data but no rel8ns key`, async () => {
+        const ibGib_s10a: IbGib_V1 = { ib: 's10a', data: { k: 'v' } };
+
+        const expected_ib_hash_s10a = "7674836E2F8926A8F0BE7998ABB44BACBC041BC51AF761F85E09A1349C60046C";
+        const expected_data_hash_s10a = "666C1AA02E8068C6D5CC1D3295009432C16790BEC28EC8CE119D0D1A18D61319";
+        const expected_gib_s10a = "81C655EDEC7294CC0900430ED8EE0125EFF15C2F86EAF047C0E8FEFE0D4569E8";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s10a.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s10a`).isGonnaBe(expected_ib_hash_s10a);
+
+        const normalizedData_ts = toNormalizedForHashing(ibGib_s10a.data);
+        const stringifiedData_ts = JSON.stringify(normalizedData_ts, getJsonReplacer_SortKeys());
+        const actualDataHash_ts = (await hashToHexCopy(stringifiedData_ts))?.toUpperCase() || '';
+        iReckon(sir, actualDataHash_ts, `actualDataHash_ts for s10a`).isGonnaBe(expected_data_hash_s10a);
+        
+        const actualRel8nsHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + "" + data_hash)
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s10a (from py test logic)`).isGonnaBe(expected_gib_s10a);
+
+        const calculatedGib_ts = (await sha256v1(ibGib_s10a, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s10a (from sha256v1 call)`).isGonnaBe(expected_gib_s10a);
+    });
+
+    await ifWe(sir, `Edge Case 10b: ibgib with rel8ns but no data key`, async () => {
+        const ibGib_s10b: IbGib_V1 = { ib: 's10b', rel8ns: { r: ['a'] } };
+
+        const expected_ib_hash_s10b = "BF2FDA41B9B401E5F86577387D6C97FCA6AB3F7A4222735C42390B587AC8517D";
+        const expected_rel8ns_hash_s10b = "8A47C0659C530ACE4A79B55DE042782ABDFCC89848CDDB71260132B1FFE554AF";
+        const expected_gib_s10b = "F35416C53D3683B60C2EE46DD1542A2A1D957F70D991D8DDEDC8C03715ED0DEA";
+
+        const ibHash_ts = (await hashToHexCopy(ibGib_s10b.ib!))?.toUpperCase() || '';
+        iReckon(sir, ibHash_ts, `ibHash_ts for s10b`).isGonnaBe(expected_ib_hash_s10b);
+
+        const normalizedRel8ns_ts = toNormalizedForHashing(ibGib_s10b.rel8ns);
+        const stringifiedRel8ns_ts = JSON.stringify(normalizedRel8ns_ts, getJsonReplacer_SortKeys());
+        const actualRel8nsHash_ts = (await hashToHexCopy(stringifiedRel8ns_ts))?.toUpperCase() || '';
+        iReckon(sir, actualRel8nsHash_ts, `actualRel8nsHash_ts for s10b`).isGonnaBe(expected_rel8ns_hash_s10b);
+
+        const actualDataHash_ts = EMPTY_HASH_FOR_ABSENT_FIELD;
+        // Manual final gib construction based on Python test logic: hash(ib_hash + rel8ns_hash + "")
+        const combinedSource_manual_ts = ibHash_ts + actualRel8nsHash_ts + actualDataHash_ts;
+        const manualGib_ts = (await hashToHexCopy(combinedSource_manual_ts))?.toUpperCase() || '';
+        iReckon(sir, manualGib_ts, `manualGib_ts for s10b (from py test logic)`).isGonnaBe(expected_gib_s10b);
+        
+        const calculatedGib_ts = (await sha256v1(ibGib_s10b, ""))?.toUpperCase();
+        iReckon(sir, calculatedGib_ts, `calculatedGib_ts for s10b (from sha256v1 call)`).isGonnaBe(expected_gib_s10b);
+    });
 
 });
